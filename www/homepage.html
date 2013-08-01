@@ -1,0 +1,132 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>移动办公系统</title>    
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" />
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />     
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script>
+</head> 
+<body>
+<div data-role="page" id="indexPage">         
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>移动办公系统</h1>    
+		<a href="javascript:logout();" data-icon="gear" class="ui-btn-left" data-theme="b">注销</a>		
+	</div>         
+	<div data-role="content">
+		<ul data-role="listview"  data-split-icon="forward" data-split-theme="b">
+			<li><a href="javascript:showList('doc')">
+				<img src="resource/images/doc.png" />
+				<h3>待办文件[<font color=red><label id="doccount"></label></font>]</h3>
+				<p>Doc</p>
+			</a><a href="javascript:showList('doc')" data-rel="dialog" data-transition="slideup">点击进入查看
+			</a></li>
+			<li><a href="javascript:showList('bulletin')">
+				<img src="resource/images/bulletin.png" />
+				<h3>公告通知</h3>
+				<p>Bulletin</p>
+				</a><a href="javascript:showList('bulletin')" data-rel="dialog" data-transition="slideup">点击进入查看
+			</a></li>
+			<li><a href="javascript:showList('email')">
+				<img src="resource/images/email.png" />
+				<h3>电子邮件</h3>
+				<p>Email</p>
+			</a><a href="javascript:showList('email')" data-rel="dialog" data-transition="slideup">点击进入查看
+			</a></li>
+			<li><a href="javascript:showList('meeting')">
+				<img src="resource/images/meeting.png" />
+				<h3>会议通知</h3>
+				<p>Meeting</p>
+				</a><a href="javascript:showList('meeting')" data-rel="dialog" data-transition="slideup">点击进入查看
+			</a></li>
+			<li><a href="javascript:showList('info')">
+				<img src="resource/images/info.png" />
+				<h3>重要资讯</h3>
+				<p>Info</p>
+			</a><a href="javascript:showList('info')" data-rel="dialog" data-transition="slideup">点击进入查看
+			</a></li>
+			<li><a href="javascript:showList('plan')">
+				<img src="resource/images/plan.png" />
+				<h3>日程安排</h3>
+				<p>Plan</p>
+				</a><a href="javascript:showList('plan')" data-rel="dialog" data-transition="slideup">点击进入查看
+			</a></li>
+		</ul>
+	</div>
+	<div id="resultLog"></div>
+	<div data-role="footer" data-position="fixed">             
+		<h1>Powered by highcom</h1>         
+	</div>     
+</div> 
+<script> 
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+$(function() { 
+    $.mobile.showPageLoadingMsg();
+	var userName = encodeURIComponent(localStorage.getItem("userName"));
+	var password = encodeURIComponent(sessionStorage.getItem("password"));
+	var param = "flag="+flag+"&userName="+userName+"&password="+password;
+	var actionUrl=httpAdrress+"docCount.action";
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {   
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+			$("#doccount").html(jsonobj.datacount);
+            $.mobile.hidePageLoadingMsg();
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+});
+//show list
+function showList(listParam){
+	if(listParam=="schedule"){
+		localStorage.setItem("listParam", listParam);  
+		window.location.replace("schedule.html");
+	}else{
+		if(listParam=="jcdy"){
+			localStorage.setItem("jcdyFlag", "0");  
+		} 
+		localStorage.setItem("listParam", listParam);  
+		window.location.replace("list.html");
+	}
+}
+//logout
+function logout(){
+	window.location.replace("index.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

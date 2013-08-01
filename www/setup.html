@@ -1,0 +1,79 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>网络设置</title>    
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" /> 
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />    
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+</head> 
+<body>
+<div data-role="page" id="indexPage">         
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>网络设置</h1> 
+		<a href="javascript:goback();" data-icon="back" class="ui-btn-right" data-theme="b">返回</a>
+	</div>         
+	<div data-role="content">         
+		<ul data-role="listview" data-inset="true" data-theme="c" data-divider-theme="e">
+			<li data-role="fieldcontain">
+	        	<label for="ip">IP地址:</label>
+	        	<input type="text" id="ip" name="ip" value="" />  
+			</li>   
+			<li data-role="fieldcontain">
+	        	<label for="port">端&nbsp;&nbsp;&nbsp;&nbsp;口:</label>
+	        	<input type="text" id="port" name="port" value="" /> 	
+			</li> 			                
+			<li class="ui-body ui-body-b">
+				<div><button type="submit" data-theme="b" id="callAjax">保存</button></div>
+			</li>		       
+	</div>           
+	<div data-role="footer" data-position="fixed">             
+		<h1>powered by Highcom</h1>       
+	</div>     
+</div> 
+<script> 
+var ip = localStorage.getItem("ip");
+var port = localStorage.getItem("port");
+$(function() { 
+    $("#ip").val(ip);
+    $("#port").val(port);
+  $("#callAjax").click(function() { 
+		if($("#ip").val().trim()==""){
+            navigator.notification.alert('您还没有输入IP地址',alertDismissed,'','确定');
+			return;
+		}
+		var httpAdrress = "";
+		if($("#ip").val().trim().indexOf("http")!=-1){
+			httpAdrress = $("#ip").val().trim();
+		}else{
+			httpAdrress = "http://"+$("#ip").val().trim();
+		}
+		if($("#port").val().trim()==""){
+			httpAdrress+="/";
+		}else{
+			httpAdrress+=":"+$("#port").val().trim()+"/";
+		}
+		httpAdrress+="imap/standard/";
+		localStorage.setItem("httpAdrress", httpAdrress);  
+        localStorage.setItem("ip", $("#ip").val().trim());  
+        localStorage.setItem("port", $("#port").val().trim()); 
+        navigator.notification.alert('保存成功',alertDismissed,'','确定');
+
+		window.location.replace("index.html");
+	}); 
+});
+//go back
+function goback(){
+	window.location.replace("index.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

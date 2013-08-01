@@ -1,0 +1,151 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>选择人员</title>    
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" /> 
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />    
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<link rel="stylesheet" href="resource/jqueryZtree/css/demo.css" type="text/css"/>
+<link rel="stylesheet" href="resource/jqueryZtree/css/zTreeStyle/zTreeStyle.css" type="text/css"/>
+<script type="text/javascript" src="resource/jqueryZtree/js/jquery.ztree.core-3.0.js"></script>
+<script type="text/javascript" src="resource/jqueryZtree/js/jquery.ztree.excheck-3.0.js"></script>
+<script src="phonegap-1.4.1.js"></script> 
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script>
+</head> 
+<body>
+<div data-role="page" id="popup">
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>选择人员</h1>    
+		<a href="javascript:goback();" data-icon="back" class="ui-btn-right" data-theme="b">返回</a>
+	</div>         
+	<div data-role="content" id="fieldcontain">
+		<div class="zTreeDemoBackground center" id="ztreeDemo" style="zoom:2">
+			<ul id="treeDemo" class="ztree"></ul>
+		</div>
+	</div>
+	<div id="resultLog"></div>
+	<Input type="button" value="确定" data-theme="b" onclick="javascript:save();"/>	
+	<div data-role="footer" data-position="fixed" id="footer" class="ui-bar">    
+		&nbsp;<a href="javascript:save();" data-role="button" data-icon="star" data-theme="b">确定</a>
+	</div> 
+</div>
+<script> 
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+var users = localStorage.getItem("users");
+var userName = encodeURIComponent(localStorage.getItem("userName"));
+var password = encodeURIComponent(sessionStorage.getItem("password"));
+//ztree
+var setting = {
+	check: {
+		enable: true
+	},
+	data: {
+		simpleData: {
+			enable: true
+		}
+	}
+};
+
+var zNodes;
+var code;
+		
+function setCheck() {
+	var zTree = $.fn.zTree.getZTreeObj("treeDemo"),
+	py = "",//被勾选时关联父 p
+	sy = "s",//被勾选时关联子 p
+	pn = "",//取消勾选时关联父 s
+	sn = "s",//取消勾选时关联子 s
+	type = { "Y":py + sy, "N":pn + sn};
+	zTree.setting.check.chkboxType = type;
+	showCode('setting.check.chkboxType = { "Y" : "' + type.Y + '", "N" : "' + type.N + '" };');
+}
+function showCode(str) {
+	if (!code) code = $("#code");
+	code.empty();
+	code.append("<li>"+str+"</li>");
+}
+		
+$(function() { 
+	getOrgTree();
+});
+function getOrgTree(){
+	var actionUrl=httpAdrress+"orgTree.action";
+	var param = "flag="+flag+"&userName="+userName+"&password="+password;
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {               
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+			zNodes = eval("["+decodeURIComponent(jsonobj.data)+"]");
+			$.fn.zTree.init($("#treeDemo"), setting, zNodes);
+			setCheck();
+			if(users!=""){
+				var treeObj = $.fn.zTree.getZTreeObj("treeDemo");
+				var arr = users.split(",");
+				for(x=0;x<arr.length;x++){
+					var node = treeObj.getNodeByParam("id", arr[x], null);
+					treeObj.checkNode(node, true, true);
+				}
+			}
+		}else{
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+}
+//
+function save(){
+	var treeObj = $.fn.zTree.getZTreeObj("treeDemo");
+	var treeNode = treeObj.getCheckedNodes(true);
+	var kk = "";
+	for (x=0;x<treeNode.length;x++) {
+		if(!treeNode[x].isParent){
+			if(kk==""){
+				kk+=treeNode[x].id;
+			}else{
+				kk+=","+treeNode[x].id;
+			}
+		}
+	}
+	if(kk!=""){
+		localStorage.setItem("users",kk);
+        window.location.replace("email.html");
+	}else{
+        navigator.notification.alert('您还没有选择人员',alertDismissed,'','确定');
+	}
+}
+    //go back
+    function goback(){
+        window.location.replace("email.html?");
+    }
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

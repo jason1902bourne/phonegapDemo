@@ -1,0 +1,121 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>签署意见</title>  
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />  
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" /> 
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />    
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script>
+<script src="phonegap-1.4.1.js"></script>
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script> 
+</head> 
+<body>
+<div data-role="page" id="popup">
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>签署意见</h1>    
+		<a href="javascript:gohome();" data-icon="home" class="ui-btn-left" data-theme="b">首页</a>
+		<a href="javascript:goback();" data-icon="back" class="ui-btn-right" data-theme="b">返回</a>
+	</div>         
+	<div data-role="content" id="viewContent">                      
+	</div>
+	<div id="resultLog"></div>     
+	<Input type="button" value="保存" data-theme="b" onclick="javascript:advDoc();"/>	
+	<div data-role="footer" data-position="fixed" id="footer" class="ui-bar">    
+		&nbsp;
+	</div> 
+</div>
+<script> 
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+var userName = encodeURIComponent(localStorage.getItem("userName"));
+var password = encodeURIComponent(sessionStorage.getItem("password"));
+var docid = encodeURIComponent(localStorage.getItem("docid"));
+var advJData = localStorage.getItem("advJData");
+var dataObj="";
+$(function() { 
+	showAdvField();
+});
+//意见框展示
+function showAdvField(){
+	dataObj=eval("("+advJData+")");//转换为json对象
+	for(x=0;x<dataObj.adv.length;x++){
+		$("#viewContent").append(buildHTML(dataObj.adv[x].title,dataObj.adv[x].name));
+	}
+	$("#viewContent").trigger("create");
+}
+//构造展示信息
+function buildHTML(title,name){
+	partHtml= "<div data-role='collapsible' data-collapsed='false' data-theme='d' data-content-theme='c'><h3>"+title+"</h3><p><textarea name='"+name+"' id='"+name+"'></textarea></p></div>"
+	return partHtml;
+}
+//adv doc
+function advDoc(){
+    $.mobile.showPageLoadingMsg();
+	//<advList><adv><advName>Chr_6</advName><advText>同意</advText></adv></advList>
+	var arr =[];
+	for(x=0;x<dataObj.adv.length;x++){
+		if($("#"+dataObj.adv[x].name).val()==""){
+            $.mobile.hidePageLoadingMsg();
+            navigator.notification.alert('您还没有填写您的意见！',alertDismissed,'','确定');
+			return;
+		}else{
+			arr.push("<adv><advName>"+dataObj.adv[x].name+"</advName><advText>"+$("#"+dataObj.adv[x].name).val()+"</advText></adv>");
+		}
+	}
+	var advXml = "<advList>"+arr.join("")+"</advList>";
+
+	var actionUrl=httpAdrress+"advDoc.action";
+	var param = "flag="+flag+"&userName="+userName+"&password="+password+"&docId="+docid+"&advXml="+encodeURIComponent(advXml);
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {    
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+            $.mobile.hidePageLoadingMsg();
+            navigator.notification.alert('意见签署成功',alertDismissed,'','确定');
+			window.location.replace("content.html");		
+		}else{
+            $.mobile.hidePageLoadingMsg();
+            navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+}
+//go back
+function goback(){
+	window.location.replace("content.html");
+}
+//go home
+function gohome(){
+	window.location.replace("homepage.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

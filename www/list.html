@@ -1,0 +1,174 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>列表页</title> 
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />   
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" />   
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />  
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script>
+</head> 
+<body>
+<div data-role="page" id="indexPage">         
+	<div data-role="header" data-theme="e" data-position="fixed" id="header">             
+		<h1><label id="moduleName"></label>列表页面<label id="dataCount"></label></h1>    
+		<a href="javascript:gohome();" data-icon="home" class="ui-btn-right" data-theme="b">首页</a>
+		<a href="javascript:logout();" data-icon="gear" class="ui-btn-left" data-theme="b">注销</a>		
+	</div>         
+	<div data-role="content">      
+		<ol data-role="listview" class="ui-listview" id="listContent">
+		</ol>                   
+	</div> 
+	<div id="resultLog"></div> 
+	<div data-role="footer" id="footer" data-position="fixed" class="ui-bar">             
+		<a href="javascript:more();" data-role="button" data-icon="more" data-theme="b">更多</a>
+        <a href="javascript:refreshList();" data-role="button" data-icon="refresh" data-theme="b">刷新</a>
+	</div>     
+</div> 
+<script> 
+
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+var userName = encodeURIComponent(localStorage.getItem("userName"));
+var password = encodeURIComponent(sessionStorage.getItem("password"));
+var listParam = localStorage.getItem("listParam");
+    var jcdyFlag = localStorage.getItem("jcdyFlag");
+var pageIndex =1;
+var pageRecord =20;
+var pageCount =1;
+$(function() { 
+	userName = encodeURIComponent(localStorage.getItem("userName"));
+	password = encodeURIComponent(sessionStorage.getItem("password"));
+	listParam = localStorage.getItem("listParam");
+	if(listParam=="email"){
+		var btnHtml = "<a href='javascript:writeEmail();' data-role='button' data-icon='star' data-theme='b'>写信</a>";
+		$("#footer").append(btnHtml);
+		$("#footer").trigger("create");	
+	}else if(listParam=="jcdy"){
+		$("#header").append("<div data-role='navbar'><ul><li><a href=\"javascript:"+"showJcdy('0')"+"\" id='jcdy0' data-iconpos='top' data-icon='star' data-theme='c'>项目进展情况</a></li><li><a href=\"javascript:"+"showJcdy('1')"+"\" id='jcdy1' data-iconpos='top' data-icon='star' data-theme='c'>生产运行情况</a></li></ul></div>");
+		$("#header").trigger("create");
+	}
+	ajaxList();
+});
+//
+function ajaxList(){
+    $.mobile.showPageLoadingMsg();
+	jcdyFlag = localStorage.getItem("jcdyFlag")
+	var actionUrl=httpAdrress+"bulletinList.action";
+	if(listParam=="email"){
+		$("#moduleName").html("电子邮件");
+		actionUrl=httpAdrress+"emailList.action";
+	}else if(listParam=="meeting"){
+		$("#moduleName").html("会议通知");
+		actionUrl=httpAdrress+"meetingList.action";
+	}else if(listParam=="info"){
+		$("#moduleName").html("重要资讯");
+		actionUrl=httpAdrress+"infoList.action";
+	}else if(listParam=="plan"){
+		$("#moduleName").html("日程安排");
+		actionUrl=httpAdrress+"planList.action";
+	}else if(listParam=="doc"){
+		$("#moduleName").html("待办公文");
+		actionUrl=httpAdrress+"docList.action";
+	}else if(listParam=="jcdy"){
+		if(jcdyFlag=="0"){
+			$("#moduleName").html("基层调研-项目进展情况");
+		}else{
+			$("#moduleName").html("基层调研-生产运行情况");
+		}
+		actionUrl=httpAdrress+"jcdyList.action";
+	}else{
+		$("#moduleName").html("公告通知");
+	}
+	
+	var param = "flag="+flag+"&userName="+userName+"&password="+password+"&pageIndex="+pageIndex+"&pageRecord="+pageRecord+"&jcdyFlag="+jcdyFlag+"&rndId="+Math.random();
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {  
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+			var dataList = jsonobj.data;
+			pageCount = jsonobj.pageCount;
+			$("#dataCount").html("[共"+jsonobj.dataCount+"条记录]");
+			var contentHtml = "";
+			for(var i =0;i<dataList.length;i++){
+				contentHtml += "<li data-theme='c' class='ui-btn ui-btn-icon-right ui-li-has-arrow ui-li ui-btn-up-c'><div class='ui-btn-inner ui-li' aria-hidden='true'><div class='ui-btn-text'><a href='javascript:showContent(\""+dataList[i].docId+"\");' class='ui-link-inherit'>"+dataList[i].title+"</a></div><span class='ui-icon ui-icon-arrow-r ui-icon-shadow'></span></div></li>";
+			}
+			$("#listContent").append(contentHtml); 
+            $.mobile.hidePageLoadingMsg();
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+}
+//jcdy
+function showJcdy(newFlag){
+	$("#listContent").html("");
+	$("#listContent").trigger("create");
+	localStorage.setItem("jcdyFlag", newFlag); 
+	ajaxList();
+}
+//more
+function more(){
+	if(pageIndex<pageCount){
+		pageIndex++;
+		ajaxList();
+	}
+}
+//refresh
+function refreshList(){
+    pageIndex = 1;
+    $("#listContent").html("");
+	$("#listContent").trigger("create");
+    ajaxList();
+}
+//link content
+function showContent(docid){
+	localStorage.setItem("docid", docid);   
+	window.location.replace("content.html?");
+}
+//write email
+function writeEmail(){
+	window.location.replace("email.html");
+}
+//logout
+function logout(){
+	window.location.replace("index.html");
+}
+//go home
+function gohome(){
+	window.location.replace("homepage.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

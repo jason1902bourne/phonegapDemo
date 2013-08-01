@@ -1,0 +1,96 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>查阅记录</title>   
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" /> 
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" />    
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" /> 
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script>
+</head> 
+<body>
+<div data-role="page" id="popup">
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>查阅记录</h1>    
+		<a href="javascript:gohome();" data-icon="home" class="ui-btn-left" data-theme="b">首页</a>
+		<a href="javascript:goback();" data-icon="back" class="ui-btn-right" data-theme="b">返回</a>
+	</div>         
+	<div data-role="content">      
+		<ol data-role="listview" class="ui-listview" id="listContent">
+		</ol>                   
+	</div>  
+	<div id="resultLog"></div>
+	<div data-role="footer" data-position="fixed" class="ui-bar">             
+		<h1>powered by Highcom</h1>
+	</div> 
+</div>
+<script> 
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+$(function() { 
+    $.mobile.showPageLoadingMsg();
+	var userName = encodeURIComponent(localStorage.getItem("userName"));
+	var password = encodeURIComponent(sessionStorage.getItem("password"));
+	var docid = encodeURIComponent(localStorage.getItem("docid"));
+
+	var actionUrl=httpAdrress+"bulletinRecord.action";
+	var param = "flag="+flag+"&userName="+userName+"&password="+password+"&docId="+docid;
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {     
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+			var dataList = jsonobj.record;
+			var contentHtml = "";
+			for(var i =0;i<dataList.length;i++){
+				var partHtml = dataList[i].item;
+				contentHtml += "<li data-theme='c' class='ui-btn ui-btn-icon-right ui-li-has-arrow ui-li ui-btn-up-c'><div class='ui-btn-inner ui-li' aria-hidden='true'><div class='ui-btn-text'><a href='#' class='ui-link-inherit'>"+partHtml+"</a></div><span class='ui-icon ui-icon-arrow-r ui-icon-shadow'></span></div></li>";
+			}
+			$("#listContent").append(contentHtml);   
+            $.mobile.hidePageLoadingMsg();
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+});
+//go back
+function goback(){
+	window.location.replace("content.html");
+}
+//go home
+function gohome(){
+	window.location.replace("homepage.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

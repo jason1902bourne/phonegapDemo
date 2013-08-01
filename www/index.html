@@ -1,0 +1,103 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>移动办公系统</title>    
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport"></meta>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type"></meta>
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css"></link>
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon"></link>
+<link href="resource/images/startup.png" rel="apple-touch-startup-image"></link>    
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        // Wait for PhoneGap to load
+        //
+        document.addEventListener("deviceready", onDeviceReady, false);
+        
+        // PhoneGap is ready
+        //
+        function onDeviceReady() {
+            localStorage.setItem("uuid","ios|"+device.uuid);  
+        }
+        </script>
+</head>
+    <body>
+<div data-role="page" id="indexPage">         
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>移动办公系统</h1>  
+	</div>         
+	<div data-role="content">         
+		<ul data-role="listview" data-inset="true" data-theme="c" data-divider-theme="e">
+			<li data-role="fieldcontain">
+	        	<label for="userName">用户名:</label>
+	        	<input type="text" id="userName" name="userName" value="" />  
+			</li>   
+			<li data-role="fieldcontain">
+	        	<label for="password">密&nbsp;&nbsp;&nbsp;&nbsp;码:</label>
+	        	<input type="password" id="password" name="password" value="" /> 	
+			</li> 			                
+			<li class="ui-body ui-body-b">
+						<div><button type="submit" data-theme="b" id="callAjax">登录</button></div>
+			</li>	
+			<li>
+			技术支持：黑龙江海康软件工程有限公司<br/>联系电话：0451--87960700<br/>地址：黑龙江省哈尔滨市动力区文昌街236号6层 
+			</li>		
+		<div id="resultLog"></div>         
+	</div>           
+	<div data-role="footer" data-position="fixed">             
+		<a href="javascript:setup();" data-role="button" data-icon="star" data-theme="b">网络设置</a>  
+	</div>     
+</div> 
+<script> 
+localStorage.setItem("flag", "standard");  
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+$(function() { 
+  $("#userName").val(localStorage.getItem("userName"));
+	$("#callAjax").click(function() { 
+		if(httpAdrress==null||httpAdrress==""){
+            navigator.notification.alert('使用系统之前请您进行网络设置',alertDismissed,'','确定');
+			setup();
+			return;
+		}
+        var param = "uuid="+localStorage.getItem("uuid")+"&flag="+flag+"&userName="+encodeURIComponent($("#userName").val())+"&password="+encodeURIComponent($("#password").val());
+                                
+		 $.ajax({                       
+		 type: "GET",                       
+		 url: httpAdrress+"login.action",                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+		 }); 
+	}); 
+ 
+  $("#resultLog").ajaxError(function(event, request, settings, exception) {             
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+  function onSuccess(jsonobj){  
+		var messageFlag = jsonobj.message;
+		if(messageFlag=="1"){
+            navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+			return;
+		}
+		localStorage.setItem("userName", $("#userName").val());  
+		sessionStorage.setItem("password", $("#password").val());  
+		window.location.replace("homepage.html");             
+	} 
+});
+
+//setup
+function setup(){
+	window.location.replace("setup.html");    
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

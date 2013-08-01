@@ -1,0 +1,234 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>受理人员选择</title>    
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" />    
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" /> 
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<link rel="stylesheet" href="resource/jqueryZtree/css/demo.css" type="text/css"/>
+<link rel="stylesheet" href="resource/jqueryZtree/css/zTreeStyle/zTreeStyle.css" type="text/css"/>
+<script type="text/javascript" src="resource/jqueryZtree/js/jquery.ztree.core-3.0.js"></script>
+<script type="text/javascript" src="resource/jqueryZtree/js/jquery.ztree.excheck-3.0.js"></script>
+<script src="phonegap-1.4.1.js"></script>    
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script>
+</head> 
+<body>
+<div data-role="page" id="popup">
+	<div data-role="header" data-theme="e" data-position="fixed">             
+		<h1>受理人员</h1>    
+		<a href="javascript:gohome();" data-icon="home" class="ui-btn-left" data-theme="b">首页</a>
+		<a href="javascript:goback();" data-icon="gear" class="ui-btn-right" data-icon="check" data-theme="b">取消</a>
+	</div>         
+	<div data-role="content" id="fieldcontain">  
+		<div data-role="fieldcontain">
+			<fieldset data-role="controlgroup" id="controlgroup">
+
+			</fieldset>
+		</div>
+		<script> 
+		var userType = encodeURIComponent(localStorage.getItem("userType"));
+		if(userType=="orgTree"){
+			window.document.write("<div class='zTreeDemoBackground center' id='ztreeDemo' style='zoom:2'><ul id='treeDemo' class='ztree'></ul></div>");
+		}
+		</script>
+	</div>    
+	<div id="resultLog"></div> 
+	<Input type="button" value="送出" data-theme="b" onclick="javascript:sendDoc();"/>	
+	<div data-role="footer" data-position="fixed" id="footer" class="ui-bar">    
+		&nbsp;<a href="javascript:sendDoc();" data-role="button" data-icon="star" data-theme="b">送出</a>
+	</div> 
+</div>
+<script> 
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+var userName = encodeURIComponent(localStorage.getItem("userName"));
+var password = encodeURIComponent(sessionStorage.getItem("password"));
+var docid = encodeURIComponent(localStorage.getItem("docid"));
+var nodeName = encodeURIComponent(localStorage.getItem("nodeName"));
+var sendType = encodeURIComponent(localStorage.getItem("sendType"));
+var users = localStorage.getItem("users");
+	//ztree
+		var setting = {
+			check: {
+				enable: true
+			},
+			data: {
+				simpleData: {
+					enable: true
+				}
+			}
+		};
+
+		var zNodes;
+		var code;
+		
+		function setCheck() {
+			var zTree = $.fn.zTree.getZTreeObj("treeDemo"),
+			py = "",//被勾选时关联父 p
+			sy = "s",//被勾选时关联子 p
+			pn = "",//取消勾选时关联父 s
+			sn = "s",//取消勾选时关联子 s
+			type = { "Y":py + sy, "N":pn + sn};
+			zTree.setting.check.chkboxType = type;
+			showCode('setting.check.chkboxType = { "Y" : "' + type.Y + '", "N" : "' + type.N + '" };');
+		}
+		function showCode(str) {
+			if (!code) code = $("#code");
+			code.empty();
+			code.append("<li>"+str+"</li>");
+		}
+		
+$(function() { 
+	//两种人员展现方式
+	if(userType=="orgTree"){
+		getOrgTree();
+	}else{
+		showUsers();
+	}
+});
+//get route
+function getOrgTree(){
+    $.mobile.showPageLoadingMsg();
+	var actionUrl=httpAdrress+"orgTree.action";
+	var param = "flag="+flag+"&userName="+userName+"&password="+password;
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {  
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+			zNodes = eval("["+decodeURIComponent(jsonobj.data)+"]");
+			$.fn.zTree.init($("#treeDemo"), setting, zNodes);
+			setCheck();
+            $.mobile.hidePageLoadingMsg();
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+}
+//Checkbox
+function showUsers(){
+	var arr = users.split(",");
+	for(i=0;i<arr.length;i++){
+		var specialStyle="";
+		if(i==0){
+			specialStyle+=" ui-corner-top";
+		}
+		if(i==arr.length-1){
+			specialStyle+=" ui-corner-bottom ui-controlgroup-last";
+		}
+		$("#controlgroup").append("<input type='checkbox' name='userCheck' id='checkbox-"+i+"' class='custom' value='"+arr[i]+"'/><label for='checkbox-"+i+"'>"+arr[i]+"</label>");
+	}
+	$("#controlgroup").trigger("create");
+}
+//send doc
+function sendDoc(){
+    $.mobile.showPageLoadingMsg();
+	//<routes type='common'><route><![CDATA[<nodeName>办公室核稿</nodeName><sendType>直送</sendType><userName>admin</userName>]]></route></routes>
+	var routeXml = "<routes type='common'><route><![CDATA[<nodeName>"+nodeName+"</nodeName><sendType>"+sendType+"</sendType>";
+	try{
+		if(userType=="orgTree"){
+			var treeObj = $.fn.zTree.getZTreeObj("treeDemo");
+			var treeNode = treeObj.getCheckedNodes(true);
+			var kk = "";
+			for (x=0;x<treeNode.length;x++) {
+				if(!treeNode[x].isParent){
+					kk+="<userName>"+encodeURIComponent(treeNode[x].id)+"</userName>";
+				}
+			}
+			if(kk==""){
+                $.mobile.hidePageLoadingMsg();
+                navigator.notification.alert('您还没有选择接收人员',alertDismissed,'','确定');
+				return;
+			}
+			routeXml+=kk+"]]></route></routes>";
+		}else{
+			var str="";
+			$("input[name='userCheck']:checkbox:checked").each(function(){ 
+				str+="<userName>"+encodeURIComponent($(this).val())+"</userName>";
+			})
+			if(str==""){
+                $.mobile.hidePageLoadingMsg();
+                navigator.notification.alert('您还没有选择接收人员',alertDismissed,'','确定');
+				return;
+			}
+			routeXml+=str+"]]></route></routes>";
+		}
+        $.mobile.hidePageLoadingMsg();
+		ajaxSendDoc(routeXml);
+	}catch(e){
+        $.mobile.hidePageLoadingMsg();
+		navigator.notification.alert(e,alertDismissed,'','确定');
+	}
+}
+//ajax send doc
+function ajaxSendDoc(routeXml){
+    $.mobile.showPageLoadingMsg();
+	var actionUrl=httpAdrress+"sendDoc.action";
+	var param = "flag="+flag+"&userName="+userName+"&password="+password+"&docId="+docid+"&routeXml="+routeXml;
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {     
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+            $.mobile.hidePageLoadingMsg();
+            navigator.notification.alert('文件送出成功',alertDismissed,'','确定');
+			window.location.replace("list.html");
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+}
+//go back
+function goback(){
+	window.location.replace("content.html");
+}
+//go home
+function gohome(){
+	window.location.replace("homepage.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

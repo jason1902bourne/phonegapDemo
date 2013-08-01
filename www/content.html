@@ -1,0 +1,344 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>详细内容页</title>    
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" /> 
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />    
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+    <script type="text/javascript" charset="utf-8" src="ChildBrowser.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        try{
+            var loginInfo = sessionStorage.getItem("password");
+            if(loginInfo==null || loginInfo==""){
+                window.location.replace("index.html");
+            }
+        }catch(e){
+            window.location.replace("index.html");
+        }
+        var childBrowser;
+        function onBodyLoad()
+        {
+            document.addEventListener("deviceready",onDeviceReady,false);
+        }
+        /* When this function is called, PhoneGap has been initialized and is ready to roll */
+        function onDeviceReady()
+        {
+            childBrowser = ChildBrowser.install();
+        }
+        function openChildBrowser(url)
+        {
+            try {
+                //both of these should work...
+                //window.plugins.childBrowser.showWebPage(url);
+                //childBrowser.showWebPage(url);
+				window.open(url);
+            }
+            catch (err)
+            {
+                navigator.notification.alert(err,alertDismissed,'','确定');
+            }
+        }
+</script>
+</head> 
+<body onload="onBodyLoad()">
+<div data-role="page" id="indexPage">         
+	<div data-role="header" data-theme="e" data-position="fixed" id="topbar">
+		<h1>详细内容</h1>
+		<a href="javascript:gohome();" data-icon="home" class="ui-btn-left" data-theme="b">首页</a>
+		<a href="javascript:goback();" data-icon="back" class="ui-btn-right" data-theme="b">返回</a>
+	</div>
+	<div data-role="content" id="viewContent">    
+
+	</div>
+	<div id="resultLog"></div>
+	<div data-role="footer" data-position="fixed" id="footer" class="ui-bar">    
+	&nbsp;
+	</div>     
+</div> 
+<script> 
+var formHtml;
+var templetData;
+var formType="0";
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+var userName = encodeURIComponent(localStorage.getItem("userName"));
+var password = encodeURIComponent(sessionStorage.getItem("password"));
+var docid = encodeURIComponent(localStorage.getItem("docid"));
+var listParam = localStorage.getItem("listParam");
+var jcdyFlag = localStorage.getItem("jcdyFlag")
+$(function() { 
+	$.mobile.showPageLoadingMsg();
+	var actionUrl=httpAdrress+"bulletinContent.action";
+	if(listParam=="email"){
+		actionUrl=httpAdrress+"emailContent.action";
+	}else if(listParam=="meeting"){
+		actionUrl=httpAdrress+"meetingContent.action";
+	}else if(listParam=="info"){
+		actionUrl=httpAdrress+"infoContent.action";
+	}else if(listParam=="plan"){
+		actionUrl=httpAdrress+"planContent.action";
+	}else if(listParam=="doc"){
+		actionUrl=httpAdrress+"docContent.action";
+	}else if(listParam=="jcdy"){
+		actionUrl=httpAdrress+"jcdyContent.action";
+	}
+	var param = "flag="+flag+"&userName="+userName+"&password="+password+"&docId="+docid+"&jcdyFlag="+jcdyFlag+"rndId="+Math.random();
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {     
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+			if(listParam=="bulletin"){
+				generatorBulletin(jsonobj);
+			}else if(listParam=="email"){
+				generatorEmail(jsonobj);
+			}else if(listParam=="meeting"){
+				generatorMeeting(jsonobj);
+			}else if(listParam=="info"){
+				generatorInfo(jsonobj);
+			}else if(listParam=="plan"){
+				generatorPlan(jsonobj);
+			}else if(listParam=="doc"){
+				generatorDoc(jsonobj);
+			}else if(listParam=="jcdy"){
+				generatorJcdy(jsonobj);
+			}
+            $.mobile.hidePageLoadingMsg();
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+});
+//go back
+function goback(){
+	window.location.replace("list.html");
+}
+//go home
+function gohome(){
+	window.location.replace("homepage.html");
+}
+//download attachment
+function downloadAttachment(link,fileName){
+	var param = "userName="+userName+"&password="+password+"&attachmentName="+encodeURIComponent(fileName)+"&link="+encodeURIComponent(link);
+    openChildBrowser(httpAdrress+"downloadAttachment.action?"+param);
+}
+//bulletin
+function generatorBulletin(jsonobj){
+	showButton("bulletinRecord();","gear","查阅记录");
+	var contentHtml = "";
+	contentHtml+=buildHTML("标题",jsonobj.title);
+	contentHtml+=buildHTML("发布人",jsonobj.creator);
+	contentHtml+=buildHTML("发布部门",jsonobj.createDept);
+	contentHtml+=buildHTML("发布时间",jsonobj.createTime);
+	contentHtml+=buildHTML("详细内容",jsonobj.content);
+	$("#viewContent").append(contentHtml);   
+	$("#viewContent").trigger("create");
+	var attachmentList = jsonobj.attData;
+	$("#viewContent").append(buildAttachment(attachmentList)); 
+}
+//email
+function generatorEmail(jsonobj){
+	var contentHtml = "";
+	contentHtml+=buildHTML("标题",jsonobj.title);
+	contentHtml+=buildHTML("发件人",jsonobj.sendBy);
+	contentHtml+=buildHTML("发件时间",jsonobj.createTime);
+	contentHtml+=buildHTML("详细内容",jsonobj.content);
+	$("#viewContent").append(contentHtml);   
+	$("#viewContent").trigger("create");
+	var attachmentList = jsonobj.attData;
+	$("#viewContent").append(buildAttachment(attachmentList)); 
+	showButton("replyEmail('"+jsonobj.sendBy+"')","star","回复");
+}
+//plan
+function generatorPlan(jsonobj){
+	var contentHtml = "";
+	contentHtml+=buildHTML("主题",jsonobj.title);
+	if(jsonobj.kind=="0"){
+		contentHtml+=buildHTML("类别","个人日程");
+	}else{
+		contentHtml+=buildHTML("类别","群组日程");
+	}
+	contentHtml+=buildHTML("开始时间",jsonobj.createTime);
+	contentHtml+=buildHTML("任务描述",jsonobj.content);
+	$("#viewContent").append(contentHtml);   
+	$("#viewContent").trigger("create");
+	//var attachmentList = jsonobj.attData;
+	//$("#viewContent").append(buildAttachment(attachmentList)); 
+}
+//info
+function generatorInfo(jsonobj){
+	var contentHtml = "";
+	contentHtml+=buildHTML("标题",jsonobj.title);
+	contentHtml+=buildHTML("发布人",jsonobj.creator);
+	contentHtml+=buildHTML("发布时间",jsonobj.createTime);
+	contentHtml+=buildHTML("内容",jsonobj.content);
+	$("#viewContent").append(contentHtml);   
+	$("#viewContent").trigger("create");
+	var attachmentList = jsonobj.attData;
+	$("#viewContent").append(buildAttachment(attachmentList)); 
+
+}
+//meeting
+function generatorMeeting(jsonobj){
+	var contentHtml = "";
+	contentHtml+=buildHTML("会议名称",jsonobj.title);
+	contentHtml+=buildHTML("会议时间",jsonobj.createTime);
+	contentHtml+=buildHTML("会议地点",jsonobj.place);
+	contentHtml+=buildHTML("主持人",jsonobj.zcr);
+	contentHtml+=buildHTML("会议内容",jsonobj.content);
+	contentHtml+=buildHTML("参加人员",jsonobj.sqck);
+	contentHtml+=buildHTML("拟稿人",jsonobj.creator);
+	$("#viewContent").append(contentHtml);   
+	$("#viewContent").trigger("create");
+	var attachmentList = jsonobj.attData;
+	$("#viewContent").append(buildAttachment(attachmentList)); 
+}
+//jcdy
+function generatorJcdy(jsonobj){
+	var contentHtml = "";
+	var dataList = jsonobj.data;
+	for(j=0;j<dataList.length;j++){
+		contentHtml+=buildHTML(dataList[j].title,dataList[j].value);
+	}
+	$("#viewContent").append(contentHtml);   
+	$("#viewContent").trigger("create");
+}
+//doc
+function generatorDoc(jsonobj){
+	var contentHtml = "";
+	//contentHtml+=buildHTML("标题",jsonobj.title);
+	//contentHtml+=buildHTML("起草时间",jsonobj.createTime);
+	//field
+	templetData = jsonobj.templetJData;
+	//show button
+	showButton("showFlow('"+jsonobj.docId+"')","info","查看流程");
+	if(jsonobj.privilege=="Y"){
+		var advJson = buildAdvParam(jsonobj.advJData);
+		localStorage.setItem("advJData", advJson);
+		showButton("advDoc('"+jsonobj.docId+"')","grid","意见");
+	}
+	showButton("sendDoc('"+jsonobj.docId+"')","star","送出");
+	formHtml = decodeURIComponent(jsonobj.formHtml);
+	if(formHtml!=""){
+		showButton("changeFormType()","gear","切换样式");
+	}
+	//首选是表格样式
+	showSimpleForm();
+	//attachment
+	var attachmentList = jsonobj.attData;
+	$("#viewContent").append(buildAttachment(attachmentList)); 
+}
+//operation button
+function showButton(functionStr,btnId,btnName){
+	var btnHtml = "<a href=\"javascript:"+functionStr+"\" data-role='button' data-icon='"+btnId+"' data-theme='b' id='"+btnId+"'>"+btnName+"</a>"
+	$("#footer").append(btnHtml);  
+	$("#footer").trigger("create");	
+}
+//构造展示信息
+function buildHTML(title,value){
+	partHtml= "<div data-role='collapsible' data-collapsed='false' data-theme='d' data-content-theme='c'><h3>"+title+"</h3><p>"+value+"</p></div>"
+	return partHtml;
+}
+//构造展示附件
+function buildAttachment(attachmentList){
+	attHtml = "<div data-role='collapsible' data-collapsed='false' data-theme='e' data-content-theme='c' class='ui-collapsible'><h3 class='ui-collapsible-heading'><a href='#' class='ui-collapsible-heading-toggle ui-btn ui-btn-up-e ui-btn-icon-left ui-corner-top' data-theme='e'><span class='ui-btn-inner ui-corner-top' aria-hidden='true'><span class='ui-btn-text'>附件<span class='ui-collapsible-heading-status'> click to collapse contents</span></span><span class='ui-icon ui-icon-shadow ui-icon-minus'></span></span></a></h3><div class='ui-collapsible-content ui-body-c ui-corner-bottom' aria-hidden='false'> ";
+	for(var i=0;i<attachmentList.length;i++){
+		var attName = attachmentList[i].name;
+		if(attName.toLowerCase().indexOf("draftfile")!=-1){
+			attName = "草稿文件";
+		}
+		if(attName.toLowerCase().indexOf("overfile")!=-1){
+			attName = "正式文件";
+		}
+		attHtml += "<image src='resource/images/attachment.png'/><a href='javascript:downloadAttachment(\""+attachmentList[i].link+"\",\""+attachmentList[i].name+"\");'<p>"+attName+"</p></a>";
+	}
+	attHtml += "</div></div>";
+	return attHtml;
+}
+//show flow
+function showFlow(id){
+	localStorage.setItem("docid", id);
+	window.location.replace("flow.html?");
+}
+//adv doc
+function advDoc(id){
+	localStorage.setItem("docid", id);
+	window.location.replace("advice.html?");
+}
+//build adv json param
+function buildAdvParam(obj){  
+    //{'adv':[{'name':'a'},{'name':'b'}]}
+	var advJson = "";
+	var arr = [];
+	for(x=0;x<obj.length;x++){
+		arr.push("{'name':'"+obj[x].name+"','title':'"+obj[x].title+"'}");
+	}
+	advJson ="{'adv':["+arr.join(",")+"]}";
+	return advJson;
+}  
+//
+function changeFormType(){
+	if(formType=="0"){
+		showHtmlForm();
+	}else{
+		showSimpleForm();
+	}
+}
+//show simple form
+function showSimpleForm(){
+	var contentHtml="";
+	for(var i=0;i<templetData.length;i++){
+		contentHtml+=buildHTML(templetData[i].title,templetData[i].value);
+	}
+	$("#viewContent").html(contentHtml); 
+	$("#viewContent").trigger("create");
+	formType="0";
+}
+//
+function showHtmlForm(){
+	if(formHtml==""){
+		return;
+	}
+	$("#viewContent").html(formHtml);	
+	$("#viewContent").trigger("create");
+	formType="1";
+}
+//send doc
+function sendDoc(id){
+	localStorage.setItem("docid", id);
+	window.location.replace("route.html?");
+}
+//reply email
+function replyEmail(sender){
+	localStorage.setItem("reply", sender);
+	window.location.replace("email.html?");
+}
+//bulletinRecord
+function bulletinRecord(){
+	window.location.replace("bulletinRecord.html?");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>

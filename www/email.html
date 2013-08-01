@@ -1,0 +1,138 @@
+<!DOCTYPE html> 
+<html>     
+<head>     
+<title>写邮件</title>    
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<link rel="stylesheet" href="resource/jquery.mobile-1.0.1.min.css" /> 
+<link href="resource/images/homescreen.gif" rel="apple-touch-icon" />
+<link href="resource/images/startup.png" rel="apple-touch-startup-image" />    
+<script src="resource/jquery-1.6.4.min.js"></script>     
+<script src="resource/jquery.mobile-1.0.1.min.js"></script> 
+<script src="phonegap-1.4.1.js"></script>
+<script>
+	try{
+		var loginInfo = sessionStorage.getItem("password");
+		if(loginInfo==null || loginInfo==""){
+			window.location.replace("index.html");
+		}
+	}catch(e){
+		window.location.replace("index.html");
+	}
+</script>
+</head> 
+<body>
+<div data-role="page" id="indexPage">         
+	<div data-role="header" data-theme="e" data-position="fixed">
+		<h1>写邮件</h1>
+		<a href="javascript:gohome();" data-icon="home" class="ui-btn-left" data-theme="b">首页</a>
+		<a href="javascript:goback();" data-icon="back" class="ui-btn-right" data-theme="b">返回</a>
+	</div>
+	<div data-role="content" id="viewContent">    
+		<div data-role="collapsible" data-collapsed="false" data-theme="d" data-content-theme="c">
+			<h3>收件人</h3>
+			<p>点击<a href="javascript:selectPeo();"><img src="resource/images/selectPeo.png"/></a>选择人员，多人以半角逗号进行分割
+			<input type="text" name="reciver" id="reciver" value=""/></p>
+		</div>
+		<div data-role="collapsible" data-collapsed="false" data-theme="d" data-content-theme="c">
+			<h3>邮件标题</h3>
+			<p><input type="text" name="title" id="title" value=""/></p>
+		</div>
+		<div data-role="collapsible" data-collapsed="false" data-theme="d" data-content-theme="c">
+			<h3>邮件内容</h3>
+			<p><textarea name="content" id="content"></textarea></p>
+		</div>
+	</div>   
+	<div id="resultLog"></div>
+	<Input type="button" value="发送" data-theme="b" onclick="javascript:send();"/>		
+	<div data-role="footer" data-position="fixed" id="footer" class="ui-bar">    
+		&nbsp;<a href="javascript:send();" data-role="button" data-icon="star" data-theme="b">发送</a>    
+	</div>     
+</div> 
+<script> 
+var httpAdrress = localStorage.getItem("httpAdrress");
+var flag = localStorage.getItem("flag");
+var userName = encodeURIComponent(localStorage.getItem("userName"));
+var password = encodeURIComponent(sessionStorage.getItem("password"));
+$(function() { 
+	var reply = localStorage.getItem("reply");
+	if(reply!=""){
+		$("#reciver").val(reply);
+	}
+	localStorage.setItem("reply", "");
+  
+    var emailUserFlag = localStorage.getItem("emailUserFlag");
+    if(emailUserFlag=="Y"){
+        $("#reciver").val(localStorage.getItem("users"));
+        $("#title").val(localStorage.getItem("emailTitle"));
+        $("#content").val(localStorage.getItem("emailContent"));
+        localStorage.setItem("emailUserFlag","N");
+    }
+  
+});
+//
+function selectPeo(){
+    localStorage.setItem("emailUserFlag","Y");
+	localStorage.setItem("users",$("#reciver").val());
+	localStorage.setItem("emailTitle",$("#title").val());
+    localStorage.setItem("emailContent",$("#content").val());
+	window.location.replace("orgTree.html");
+}
+//send email
+function send(){
+    $.mobile.showPageLoadingMsg();
+	if($("#reciver").val().trim()==""){
+        $.mobile.hidePageLoadingMsg();
+        navigator.notification.alert("您还没有选择收件人",alertDismissed,'','确定');
+		return;
+	}
+	if($("#title").val().trim()==""){
+        $.mobile.hidePageLoadingMsg();
+        navigator.notification.alert("您还没有填写邮件标题",alertDismissed,'','确定');
+		return;
+	}
+	var emailXml = "<mailcontent><subject><![CDATA["+encodeURIComponent($("#title").val())+"]]></subject><sendto><![CDATA["+encodeURIComponent($("#reciver").val())+"]]></sendto><copyto/><blindcopyto/><body><![CDATA["+encodeURIComponent($("#content").val())+"]]></body></mailcontent>";
+	var actionUrl=httpAdrress+"sendEmail.action";
+	var param = "flag="+flag+"&userName="+userName+"&password="+password+"&emailXml="+encodeURIComponent(emailXml);
+	$.ajax({                       
+		 type: "GET",                       
+		 url: actionUrl,                       
+		 data: param,                       
+		 cache: false,                       
+		 dataType: "jsonp",  
+		 jsonp: 'jsoncallback',
+		 success: onSuccess                     
+	}); 
+ 
+	$("#resultLog").ajaxError(function(event, request, settings, exception) {   
+        $.mobile.hidePageLoadingMsg();
+		$("#resultLog").html("Error Calling: " + settings.url + "<br />HTPP Code: " + request.status);             
+	});
+ 
+	function onSuccess(jsonobj){   
+		if(jsonobj.message=="0"){
+            $.mobile.hidePageLoadingMsg();
+            navigator.notification.alert("邮件发送成功",alertDismissed,'','确定');
+			window.location.replace("list.html?rndId="+Math.random());
+		}else{
+            $.mobile.hidePageLoadingMsg();
+			navigator.notification.alert(jsonobj.description,alertDismissed,'','确定');
+		}
+	} 
+
+}
+//go back
+function goback(){
+	window.location.replace("list.html?");
+}
+//go home
+function gohome(){
+	window.location.replace("homepage.html");
+}
+    // alert dialog dismissed
+    function alertDismissed() {
+        // do something
+    }
+</script>
+</body>
+</html>
